@@ -126,7 +126,7 @@ button,input { font-family:inherit; }
 <script>
 (function () {
   'use strict';
-  var VERSAO = '0.3.0';
+  var VERSAO = '0.3.1';
 
   var MOTIVOS = [
     ['Impedimento', ['Grande Quantidade','Dentro do Imóvel','Carro Obstruindo','Endereço não Encontrado','Morador de rua no local','Aterro']],
@@ -174,7 +174,7 @@ button,input { font-family:inherit; }
 
   /* ---------- estado ---------- */
   var O=null, paradas=[], KEY='';
-  var S={ res:{}, motivo:{}, horas:{}, fotos:{}, foco:0, view:'foco',
+  var S={ res:{}, motivo:{}, horas:{}, fotos:{}, foco:0, view:'lista',
           enviado:null, log:[], saiuPara:null, saiuEm:null, aviso:null };
 
   function save(){
@@ -185,7 +185,7 @@ button,input { font-family:inherit; }
   }
   function carregar(){ try{ var r=localStorage.getItem(KEY); if(!r) return;
       var o=JSON.parse(r); Object.keys(S).forEach(function(k){ if(o[k]!=null) S[k]=o[k]; });
-      if(!S.log) S.log=[]; S.view = S.enviado ? 'enviado' : 'foco'; S.aviso=null;
+      if(!S.log) S.log=[]; S.view = S.enviado ? 'enviado' : 'lista'; S.aviso=null;
     }catch(e){} }
   function logar(m){ S.log.push({t:new Date().toISOString(),m:m}); }
 
@@ -310,13 +310,8 @@ button,input { font-family:inherit; }
       }).join('')+'</div>';
     }
 
-    h += '<button type="button" class="volta" data-act="lista">Ver todas as paradas</button>';
-    if (!travado() && faltam()===0) {
-      h += '<button type="button" class="btn btn-ok" data-act="conferir">FECHAR ORDEM E ENVIAR</button>';
-    } else if (!travado()) {
-      h += '<div class="painel"><p class="alerta">Faltam '+faltam()+' '+(faltam()===1?'coleta':'coletas')+' para encerrar esta Ordem</p></div>';
-    }
-    h += '<p class="foot">v'+VERSAO+'</p>';
+    h += '<button type="button" class="volta" data-act="voltar-foco">← Voltar à lista</button>';
+    h += '<p class="foot"><button type="button" class="mini" data-act="ver">v'+VERSAO+'</button></p>';
     $('root').innerHTML=h;
   }
 
@@ -324,13 +319,14 @@ button,input { font-family:inherit; }
     var h = topo() + '<h2 class="sec-h">Todas as paradas</h2><div class="lista">';
     paradas.forEach(function(p,i){
       var r=S.res[p.key], mot=S.motivo[p.key], ok=respondida(p);
-      h += '<button type="button" class="lin'+(ok?' feita':'')+'" data-act="abrir" data-i="'+i+'">'+
+      h += '<button type="button" id="lin-'+p.key+'" class="lin'+(ok?' feita':'')+'" data-act="abrir" data-i="'+i+'">'+
         '<span class="num">'+pad(p.n)+'</span><span><span class="end">'+esc(p.e)+'</span><br>'+
         '<span class="st">'+(ok?GLIFO[r]+' '+NOME[r]+(mot?' - '+esc(mot):'')+(S.fotos[p.key]?' 📷':''):'— pendente')+'</span></span></button>';
     });
-    h += '</div><button type="button" class="volta" data-act="voltar-foco">Voltar</button>';
+    h += '</div>';
     if (!travado() && faltam()===0) h += '<button type="button" class="btn btn-ok" data-act="conferir">FECHAR ORDEM E ENVIAR</button>';
     else if (!travado()) h += '<div class="painel"><p class="alerta">Faltam '+faltam()+' '+(faltam()===1?'coleta':'coletas')+' para encerrar esta Ordem</p></div>';
+    h += '<p class="foot"><button type="button" class="mini" data-act="ver">v'+VERSAO+'</button></p>';
     $('root').innerHTML=h;
   }
 
@@ -354,12 +350,11 @@ button,input { font-family:inherit; }
     $('root').innerHTML = topo()+
       '<div class="okbox"><div class="big">✓ ENVIADO</div>'+
       '<div>'+dataBR(S.enviado)+' às '+hhmm(S.enviado)+'</div></div>'+
-      (nf ? '<div class="painel"><p class="hint">'+nf+' '+(nf===1?'foto':'fotos')+' desta ordem.</p>'+
-            '<button type="button" class="btn btn-foto" data-act="mandar-fotos">Mandar '+(nf===1?'a foto':'as '+nf+' fotos')+'</button></div>' : '')+
       '<div class="painel"><button type="button" class="btn btn-ok" data-act="reenviar">Mandar o resumo de novo</button>'+
+      (nf ? '<button type="button" class="btn btn-foto" data-act="mandar-fotos">Mandar '+(nf===1?'a foto':'as '+nf+' fotos')+'</button>' : '')+
       '<button type="button" class="volta" data-act="lista">Ver todas as paradas</button>'+
       '<button type="button" class="mini" data-act="arquivo">arquivo para o sistema</button></div>'+
-      '<p class="foot">v'+VERSAO+'</p>';
+      '<p class="foot"><button type="button" class="mini" data-act="ver">v'+VERSAO+'</button></p>';
   }
 
   /* ---------- texto do resumo ---------- */
@@ -491,9 +486,11 @@ button,input { font-family:inherit; }
   /* ---------- ações ---------- */
   function irPara(i){ S.foco=Math.max(0,Math.min(paradas.length-1,i)); S.view='foco'; save(); render(); window.scrollTo(0,0); }
   function proxima(){
-    var i=indicePendente();
-    if (faltam()===0) { S.view='conferir'; save(); render(); window.scrollTo(0,0); return; }
-    irPara(i);
+    S.view='lista'; save(); render();
+    var p=paradas[indicePendente()];
+    var el = p && $('lin-'+p.key);
+    if (faltam()===0 || !el) { window.scrollTo(0,0); return; }
+    try { el.scrollIntoView({ block:'center', behavior:'auto' }); } catch(e) { window.scrollTo(0,0); }
   }
   function marcar(r){
     var p=paradas[S.foco];
@@ -527,6 +524,20 @@ button,input { font-family:inherit; }
     setTimeout(mandarTexto, 120);
   }
 
+  var toques=0, toqueT=null;
+  function toqueVersao(){
+    clearTimeout(toqueT); toques++;
+    toqueT=setTimeout(function(){ toques=0; }, 1500);
+    if (toques<5) { if(toques>=3) toast('mais '+(5-toques)+'...'); return; }
+    toques=0;
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    db().then(function(d){ d.transaction('f','readwrite').objectStore('f').clear(); }).catch(function(){});
+    S.res={}; S.motivo={}; S.horas={}; S.fotos={}; S.enviado=null; S.log=[];
+    S.saiuPara=null; S.aviso=null; S.pendenteFoto=false; S.previa=null;
+    S.view='lista'; S.foco=0; logar('Ordem reiniciada'); save();
+    toast('Ordem reiniciada.'); render(); window.scrollTo(0,0);
+  }
+
   document.addEventListener('click', function(ev){
     var t=ev.target.closest?ev.target.closest('[data-act]'):null; if(!t) return;
     var a=t.getAttribute('data-act');
@@ -538,7 +549,7 @@ button,input { font-family:inherit; }
     else if (a==='limpar') limpar();
     else if (a==='prox') proxima();
     else if (a==='lista'){ S.view='lista'; save(); render(); window.scrollTo(0,0); }
-    else if (a==='voltar-foco'){ S.view = S.enviado?'enviado':'foco'; save(); render(); window.scrollTo(0,0); }
+    else if (a==='voltar-foco'){ S.view = S.enviado?'enviado':'lista'; save(); render(); window.scrollTo(0,0); }
     else if (a==='ver-enviado'){ S.view='enviado'; save(); render(); window.scrollTo(0,0); }
     else if (a==='abrir'){ if(travado()){ toast('Ordem enviada, não dá pra mudar.'); return; } irPara(parseInt(t.getAttribute('data-i'),10)); }
     else if (a==='conferir'){ S.view='conferir'; save(); render(); window.scrollTo(0,0); }
@@ -548,6 +559,7 @@ button,input { font-family:inherit; }
     else if (a==='arquivo') baixarArquivo();
     else if (a==='ir-aviso'){ var k=S.aviso&&S.aviso.key; S.aviso=null;
       var idx=paradas.map(function(x){return x.key;}).indexOf(k); save(); irPara(idx<0?S.foco:idx); }
+    else if (a==='ver'){ toqueVersao(); }
     else if (a==='foto'){ $('cam').click(); }
     else if (a==='foto-ok'){ S.pendenteFoto=false; S.previa=null; save(); proxima(); }
   });
