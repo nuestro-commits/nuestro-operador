@@ -50,9 +50,19 @@ a{color:var(--accent)}
     </div>
     <div class="field">
       <label for="g-json">JSON da ordem</label>
-      <textarea id="g-json" spellcheck="false"></textarea>
-      <p class="rule">Campos: <span class="mono">ordem, emissao, bairro, cidade, itens[{p, e, d, o}]</span> — p = protocolo, e = endereço, d = descrição, o = observação.</p>
-      <div class="acts"><button type="button" class="btn btn-g" id="b-exemplo">Carregar exemplo L2-0003</button></div>
+      <textarea id="g-json" spellcheck="false" placeholder='{
+ "ordem": "NS-0033",
+ "emissao": "30/10/2026",
+ "frota": "CAVO/LOTE2",
+ "elaborado": "Sandro",
+ "bairro": "Tingui",
+ "cidade": "Curitiba - PR",
+ "paradas": [
+  {"n":1, "e":"R. Joaquim Nabuco, 30",
+   "i":[{"p":"12557574","dt":"30/09","d":"Solicito retirada de sobras de madeira."}]}
+ ]
+}'></textarea>
+      <p class="rule">Formato: <span class="mono">{ordem, emissao, frota, elaborado, bairro, cidade, paradas:[{n, e, i:[{p, dt, d, o}], o}]}</span><br>n = nº da rota · e = endereço · i = protocolos da parada · p = protocolo · dt = data · d = descrição · o = observação.</p>
     </div>
     <div class="acts"><button type="button" class="btn" id="b-gerar">Gerar link</button></div>
     <div id="msg"></div>
@@ -83,58 +93,11 @@ a{color:var(--accent)}
   'use strict';
   function $(id) { return document.getElementById(id); }
 
-  var EXEMPLO = {
-    ordem: 'L2-0003', emissao: '31/08/2026', bairro: 'Tingui', cidade: 'Curitiba - PR',
-    itens: [
-      { p:'12421854', e:'Rua Macapá, 475', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12460799', e:'RUA MACAPÁ, 475', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12420580', e:'Rua Brasílio Bacellar Filho, 465', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12420708', e:'Rua Dr. Marins Alves de Camargo, 313', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12421332', e:'Rua Nicolau Salomão, 747', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12453837', e:'Rua Eng. Ernesto Guaita, 85', d:'Vários lixos, resto de móveis, colchão, telhas.' },
-      { p:'12460711', e:'Rua Eng. Ernesto Guaita, 85', d:'Lixo, resto de móveis, material de construção.' },
-      { p:'12489791', e:'Rua Eng. Ernesto Guaita, 85', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12444871', e:'Rua Miguel Jorge Nasser, 1014', d:'Solicita coleta de entulhos diversos.', o:'Ciente dos procedimentos.' },
-      { p:'12444874', e:'Rua Miguel Jorge Nasser, 1014', d:'Solicita coleta de lixo vegetal.', o:'Ciente dos procedimentos.' },
-      { p:'12480276', e:'RUA FELISBINO PASSOS, 249', d:'Solicito recolhimento de resíduos vegetais.' },
-      { p:'12398772', e:'Rua Dr. Satilas do Amaral Camargo, 65', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12468906', e:'RUA JOSÉ WOSCH SOBRINHO, 236', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12219594', e:'Rua Max Rosenmann, 139', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12198049', e:'Rua Frei Nicodemus Grunhoff, 71', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12198050', e:'Rua Frei Nicodemus Grunhoff, 71', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12438121', e:'Rua Frei Nicodemus Grunhoff, 71', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12196415', e:'Rua Bernardo Glodzinski, 27', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12467031', e:'Rua Bernardo Glodzinski, 27', d:'Solicito a coleta de restos de construção residencial. O material, placas de plástico/PVC, já está recolhido na calçada em frente ao imóvel, totalizando menos de 5 carrinhos de mão.' },
-      { p:'12467552', e:'Rua Bernardo Glodzinski, 240', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12473794', e:'Rua Bernardo Glodzinski, 240', d:'Solicita coleta de caliças.' },
-      { p:'12413614', e:'Rua Cel. Benedito Tertuliano Cordeiro, 290', d:'Solicita coleta de caliças.', o:'Protocolo 012394490 (Solicitação). Cita que já foi recolhido.' },
-      { p:'12480788', e:'Rua Cel. Benedito Tertuliano Cordeiro, 290', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12219949', e:'Rua Bernardo Rosenmann, 122', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12202289', e:'Rua Bernardo Rosenmann, 139', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12220653', e:'Rua Alferes Marcílio Machado, 479', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12217944', e:'Rua Hermínio Cardoso, 408', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12194219', e:'Rua Max Rosenmann, 661', d:'Solicita coleta de lixo vegetal.', o:'Esquina com a rua João Ivanoski.' },
-      { p:'12218216', e:'Rua Max Rosenmann, 663', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12194234', e:'Rua Max Rosenmann, 680', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12197120', e:'Rua Alferes Marcílio Machado, 603', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12218406', e:'Rua João Ivanoski, 295', d:'Solicita coleta de entulhos diversos.' },
-      { p:'12405321', e:'RUA JOÃO IVANOSKI, 36', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12437671', e:'Rua João Ivanoski, 36', d:'Solicita coleta de lixo vegetal.', o:'Esquina com a Rua Alberto Manoel Glaser.' },
-      { p:'12472242', e:'Rua João Ivanoski, 36', d:'Solicita coleta de lixo vegetal.' },
-      { p:'12477481', e:'Rua João Ivanoski, 36', d:'Retirada de galhos.' }
-    ]
-  };
-
   /* endereço do app = esta pasta + index.html */
   var base = location.href.replace(/gerador\.html.*$/, 'index.html');
   $('g-url').value = base;
   var d = new Date(); d.setDate(d.getDate() + 2);
   $('g-val').value = d.toISOString().slice(0, 10);
-
-  $('b-exemplo').addEventListener('click', function () {
-    $('g-json').value = JSON.stringify(EXEMPLO, null, 1);
-    $('msg').innerHTML = '<div class="ok">Exemplo carregado: 36 protocolos.</div>';
-  });
 
   function msg(cls, txt) { $('msg').innerHTML = '<div class="' + cls + '">' + txt + '</div>'; }
 
@@ -144,9 +107,10 @@ a{color:var(--accent)}
     var ord;
     try { ord = JSON.parse($('g-json').value); }
     catch (e) { msg('err', 'JSON inválido: ' + e.message); return; }
-    if (!ord || !ord.itens || !ord.itens.length) { msg('err', 'A ordem precisa de ao menos um item em "itens".'); return; }
+    var qtd = (ord && ord.paradas && ord.paradas.length) || (ord && ord.itens && ord.itens.length) || 0;
+    if (!qtd) { msg('err', 'A ordem precisa de "paradas" (ou "itens" no formato antigo).'); return; }
 
-    ord.v = 1;
+    ord.v = ord.paradas ? 2 : 1;
     if ($('g-mot').value) ord.motorista = $('g-mot').value;
     if ($('g-frota').value) ord.frota = $('g-frota').value;
     if ($('g-val').value) ord.validade = $('g-val').value;
@@ -155,12 +119,12 @@ a{color:var(--accent)}
       var url = $('g-url').value.replace(/#.*$/, '') + '#' + frag;
       linkAtual = url;
       $('o-link').textContent = url;
-      $('o-tam').textContent = url.length + ' caracteres · ' + ord.itens.length + ' protocolos';
+      $('o-tam').textContent = url.length + ' caracteres · ' + qtd + (ord.paradas ? ' paradas' : ' protocolos');
       $('b-abrir').href = url;
 
       msgAtual = 'Ordem ' + (ord.ordem || '') + (ord.bairro ? ' — ' + ord.bairro : '') + '\n' +
         (ord.frota ? 'Frota ' + ord.frota + '\n' : '') +
-        ord.itens.length + ' protocolos.\n\n' + url + '\n\n' +
+        qtd + (ord.paradas ? ' paradas.' : ' protocolos.') + '\n\n' + url + '\n\n' +
         'Abra o link no Chrome antes de sair, pra funcionar sem sinal. Depois de abrir, pode adicionar à tela inicial.';
       $('o-msg').textContent = msgAtual;
 
