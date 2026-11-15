@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gerador de link — NUESTRO OPERADOR</title>
+<meta name="theme-color" content="#0b3d2e">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{--font-display:'Barlow Semi Condensed','Arial Narrow',system-ui,sans-serif;--font-body:'Barlow',system-ui,sans-serif;--font-mono:'IBM Plex Mono',ui-monospace,monospace;
+--bg:#e9eee8;--surface:#fafbf9;--ink:#15211b;--muted:#56675d;--line:#cfd8ce;--accent:#0b3d2e;--on-accent:#fff;--ok-bg:#d9eee1;--ok:#12543d;--bad:#a8231b;--bad-bg:#f8dad7}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1612;--surface:#172019;--ink:#e8efe9;--muted:#98a99e;--line:#2a372e;--accent:#4cc38a;--on-accent:#06150d;--ok:#6fd6a3;--ok-bg:#1d3a2b;--bad:#ff8a80;--bad-bg:#3d1f1c;color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;margin:0;padding:16px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-bottom:40px}
+.eyebrow{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+h1{font-family:var(--font-display);font-size:32px;margin:2px 0 0;line-height:1}
+h2{font-family:var(--font-display);font-size:20px;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-size:14px;font-weight:600}
+input,textarea{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:16px;font-family:inherit}
+textarea{padding:10px 12px;min-height:200px;font-family:var(--font-mono);font-size:13px;line-height:1.5;resize:vertical}
+.btn{min-height:50px;padding:0 18px;border-radius:9px;border:0;background:var(--accent);color:var(--on-accent);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-g{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.acts{display:flex;flex-wrap:wrap;gap:10px}
+.out{font-family:var(--font-mono);font-size:12px;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:140px;overflow:auto}
+.ok{background:var(--ok-bg);color:var(--ok);padding:10px 12px;border-radius:8px;font-weight:600;font-size:14px}
+.err{background:var(--bad-bg);color:var(--bad);padding:10px 12px;border-radius:8px;font-weight:600;font-size:14px}
+.rule{margin:0;font-size:14px;color:var(--muted)}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="eyebrow">NUESTRO OPERADOR</div><h1>Gerador de link</h1></header>
+
+  <section class="card">
+    <h2>1. Dados da ordem</h2>
+    <div class="row">
+      <div class="field"><label for="g-url">Endereço do app</label><input id="g-url" type="text"></div>
+      <div class="field"><label for="g-val">Vale até (AAAA-MM-DD)</label><input id="g-val" type="date"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="g-mot">Motorista</label><input id="g-mot" type="text"></div>
+      <div class="field"><label for="g-frota">ID Frota</label><input id="g-frota" type="text"></div>
+      <div class="field"><label for="g-fone">WhatsApp do motorista</label><input id="g-fone" type="tel" placeholder="41999998888"></div>
+    </div>
+    <div class="field">
+      <label for="g-json">JSON da ordem</label>
+      <textarea id="g-json" spellcheck="false"></textarea>
+      <p class="rule">Campos: <span class="mono">ordem, emissao, bairro, cidade, itens[{p, e, d, o}]</span> — p = protocolo, e = endereço, d = descrição, o = observação.</p>
+      <div class="acts"><button type="button" class="btn btn-g" id="b-exemplo">Carregar exemplo L2-0003</button></div>
+    </div>
+    <div class="acts"><button type="button" class="btn" id="b-gerar">Gerar link</button></div>
+    <div id="msg"></div>
+  </section>
+
+  <section class="card" id="res" hidden>
+    <h2>2. Link da ordem</h2>
+    <div class="out" id="o-link"></div>
+    <p class="rule" id="o-tam"></p>
+    <div class="acts">
+      <button type="button" class="btn" id="b-copiar">Copiar link</button>
+      <a class="btn btn-g" id="b-abrir" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Abrir a ordem</a>
+    </div>
+    <h2>3. Enviar por WhatsApp</h2>
+    <div class="out" id="o-msg"></div>
+    <div class="acts">
+      <a class="btn" id="b-wa" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Abrir WhatsApp com a mensagem</a>
+      <button type="button" class="btn btn-g" id="b-copiamsg">Copiar mensagem</button>
+    </div>
+  </section>
+
+  <p class="rule">Os dados da ordem ficam depois do <span class="mono">#</span> e nunca são enviados ao servidor que hospeda o app. <a href="index.html">Voltar ao app</a></p>
+</div>
+
+<script src="ordem.js"></script>
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+
+  var EXEMPLO = {
+    ordem: 'L2-0003', emissao: '31/08/2026', bairro: 'Tingui', cidade: 'Curitiba - PR',
+    itens: [
+      { p:'12421854', e:'Rua Macapá, 475', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12460799', e:'RUA MACAPÁ, 475', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12420580', e:'Rua Brasílio Bacellar Filho, 465', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12420708', e:'Rua Dr. Marins Alves de Camargo, 313', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12421332', e:'Rua Nicolau Salomão, 747', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12453837', e:'Rua Eng. Ernesto Guaita, 85', d:'Vários lixos, resto de móveis, colchão, telhas.' },
+      { p:'12460711', e:'Rua Eng. Ernesto Guaita, 85', d:'Lixo, resto de móveis, material de construção.' },
+      { p:'12489791', e:'Rua Eng. Ernesto Guaita, 85', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12444871', e:'Rua Miguel Jorge Nasser, 1014', d:'Solicita coleta de entulhos diversos.', o:'Ciente dos procedimentos.' },
+      { p:'12444874', e:'Rua Miguel Jorge Nasser, 1014', d:'Solicita coleta de lixo vegetal.', o:'Ciente dos procedimentos.' },
+      { p:'12480276', e:'RUA FELISBINO PASSOS, 249', d:'Solicito recolhimento de resíduos vegetais.' },
+      { p:'12398772', e:'Rua Dr. Satilas do Amaral Camargo, 65', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12468906', e:'RUA JOSÉ WOSCH SOBRINHO, 236', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12219594', e:'Rua Max Rosenmann, 139', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12198049', e:'Rua Frei Nicodemus Grunhoff, 71', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12198050', e:'Rua Frei Nicodemus Grunhoff, 71', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12438121', e:'Rua Frei Nicodemus Grunhoff, 71', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12196415', e:'Rua Bernardo Glodzinski, 27', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12467031', e:'Rua Bernardo Glodzinski, 27', d:'Solicito a coleta de restos de construção residencial. O material, placas de plástico/PVC, já está recolhido na calçada em frente ao imóvel, totalizando menos de 5 carrinhos de mão.' },
+      { p:'12467552', e:'Rua Bernardo Glodzinski, 240', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12473794', e:'Rua Bernardo Glodzinski, 240', d:'Solicita coleta de caliças.' },
+      { p:'12413614', e:'Rua Cel. Benedito Tertuliano Cordeiro, 290', d:'Solicita coleta de caliças.', o:'Protocolo 012394490 (Solicitação). Cita que já foi recolhido.' },
+      { p:'12480788', e:'Rua Cel. Benedito Tertuliano Cordeiro, 290', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12219949', e:'Rua Bernardo Rosenmann, 122', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12202289', e:'Rua Bernardo Rosenmann, 139', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12220653', e:'Rua Alferes Marcílio Machado, 479', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12217944', e:'Rua Hermínio Cardoso, 408', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12194219', e:'Rua Max Rosenmann, 661', d:'Solicita coleta de lixo vegetal.', o:'Esquina com a rua João Ivanoski.' },
+      { p:'12218216', e:'Rua Max Rosenmann, 663', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12194234', e:'Rua Max Rosenmann, 680', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12197120', e:'Rua Alferes Marcílio Machado, 603', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12218406', e:'Rua João Ivanoski, 295', d:'Solicita coleta de entulhos diversos.' },
+      { p:'12405321', e:'RUA JOÃO IVANOSKI, 36', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12437671', e:'Rua João Ivanoski, 36', d:'Solicita coleta de lixo vegetal.', o:'Esquina com a Rua Alberto Manoel Glaser.' },
+      { p:'12472242', e:'Rua João Ivanoski, 36', d:'Solicita coleta de lixo vegetal.' },
+      { p:'12477481', e:'Rua João Ivanoski, 36', d:'Retirada de galhos.' }
+    ]
+  };
+
+  /* endereço do app = esta pasta + index.html */
+  var base = location.href.replace(/gerador\.html.*$/, 'index.html');
+  $('g-url').value = base;
+  var d = new Date(); d.setDate(d.getDate() + 2);
+  $('g-val').value = d.toISOString().slice(0, 10);
+
+  $('b-exemplo').addEventListener('click', function () {
+    $('g-json').value = JSON.stringify(EXEMPLO, null, 1);
+    $('msg').innerHTML = '<div class="ok">Exemplo carregado: 36 protocolos.</div>';
+  });
+
+  function msg(cls, txt) { $('msg').innerHTML = '<div class="' + cls + '">' + txt + '</div>'; }
+
+  var linkAtual = '', msgAtual = '';
+
+  $('b-gerar').addEventListener('click', function () {
+    var ord;
+    try { ord = JSON.parse($('g-json').value); }
+    catch (e) { msg('err', 'JSON inválido: ' + e.message); return; }
+    if (!ord || !ord.itens || !ord.itens.length) { msg('err', 'A ordem precisa de ao menos um item em "itens".'); return; }
+
+    ord.v = 1;
+    if ($('g-mot').value) ord.motorista = $('g-mot').value;
+    if ($('g-frota').value) ord.frota = $('g-frota').value;
+    if ($('g-val').value) ord.validade = $('g-val').value;
+
+    window.OrdemCodec.encode(ord).then(function (frag) {
+      var url = $('g-url').value.replace(/#.*$/, '') + '#' + frag;
+      linkAtual = url;
+      $('o-link').textContent = url;
+      $('o-tam').textContent = url.length + ' caracteres · ' + ord.itens.length + ' protocolos';
+      $('b-abrir').href = url;
+
+      msgAtual = 'Ordem ' + (ord.ordem || '') + (ord.bairro ? ' — ' + ord.bairro : '') + '\n' +
+        (ord.frota ? 'Frota ' + ord.frota + '\n' : '') +
+        ord.itens.length + ' protocolos.\n\n' + url + '\n\n' +
+        'Abra o link no Chrome antes de sair, pra funcionar sem sinal. Depois de abrir, pode adicionar à tela inicial.';
+      $('o-msg').textContent = msgAtual;
+
+      var fone = $('g-fone').value.replace(/\D/g, '');
+      if (fone && fone.length <= 11) fone = '55' + fone;
+      $('b-wa').href = 'https://wa.me/' + (fone || '') + '?text=' + encodeURIComponent(msgAtual);
+
+      $('res').hidden = false;
+      msg('ok', 'Link gerado.');
+      $('res').scrollIntoView({ behavior:'smooth', block:'start' });
+    }).catch(function (e) { msg('err', 'Falha ao gerar: ' + e.message); });
+  });
+
+  function copiar(txt, ok) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { msg('ok', ok); });
+    } else {
+      var ta = document.createElement('textarea'); ta.value = txt;
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); msg('ok', ok); } catch (e) { msg('err', 'Não foi possível copiar.'); }
+      ta.remove();
+    }
+  }
+  $('b-copiar').addEventListener('click', function () { copiar(linkAtual, 'Link copiado.'); });
+  $('b-copiamsg').addEventListener('click', function () { copiar(msgAtual, 'Mensagem copiada.'); });
+})();
+</script>
+</body>
+</html>
