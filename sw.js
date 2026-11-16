@@ -1,5 +1,5 @@
 /* sw.js — cache do app. A ordem não passa por aqui: ela vive no fragmento do link. */
-var CACHE = 'nuestro-operador-v0.4.0';
+var CACHE = 'nuestro-operador-v0.4.1';
 var ARQ = [
   './', './index.html', './ordem.js', './gerador.html',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
