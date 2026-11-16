@@ -73,6 +73,18 @@ button,input { font-family:inherit; }
 .resp button[data-r="NL"] { border-color:var(--nl); }
 .resp button[data-r="N"]  { border-color:var(--bad); }
 
+/* navegação do cartão */
+.navtopo { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.btn-volta { min-height:54px; padding:0 14px; border-radius:10px; border:2px solid var(--accent); background:var(--surface);
+  color:var(--accent); font-size:17px; font-weight:700; cursor:pointer; }
+.btn-volta.grande { min-height:58px; font-size:18px; }
+.lin.travada { opacity:.5; }
+.mtopo { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.outros { display:flex; flex-direction:column; gap:10px; }
+.outros label { font-size:15px; font-weight:700; }
+.outros input { min-height:56px; padding:0 14px; border:2px solid var(--line); border-radius:9px;
+  background:var(--bg); color:var(--ink); font-size:18px; width:100%; }
+
 /* motivos */
 .motivos { background:var(--surface); border:3px solid var(--bad); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
 .motivos h2 { font-family:var(--font-display); font-size:21px; margin:0; color:var(--bad); }
@@ -126,12 +138,12 @@ button,input { font-family:inherit; }
 <script>
 (function () {
   'use strict';
-  var VERSAO = '0.3.1';
+  var VERSAO = '0.4.0';
 
-  var MOTIVOS = [
-    ['Impedimento', ['Grande Quantidade','Dentro do Imóvel','Carro Obstruindo','Endereço não Encontrado','Morador de rua no local','Aterro']],
-    ['Material não aceito', ['Tronco de Árvore','Areia, Terra, Pedra','Blocos de Concreto','Fibra de Vidro','Gesso, Drywall']]
-  ];
+  var MOTIVOS = ['Grande Quantidade','Dentro do Imóvel','Carro Obstruindo','Endereço não Encontrado',
+    'Morador de rua no local','Tronco de Árvore','Areia, Terra, Pedra','Blocos de Concreto',
+    'Fibra de Vidro','Gesso, Drywall','Carga completa','Vistoria','Outros'];
+  var OUTROS = 'Outros';
   var COM_FOTO = 'Grande Quantidade';
   var NOME = { S:'Coletado', NL:'Nada no local', N:'Não Coletado' };
   var GLIFO = { S:'✓', NL:'○', N:'✕' };
@@ -194,7 +206,7 @@ button,input { font-family:inherit; }
     var loc=[O.bairro,O.cidade].filter(Boolean).join(', ');
     var brutas=[];
     if (O.paradas && O.paradas.length) {
-      brutas = O.paradas.map(function(p,i){ return { n:p.n||(i+1), e:p.e||'', itens:p.i||p.itens||[], o:p.o||'' }; });
+      brutas = O.paradas.map(function(p,i){ return { n:p.n||(i+1), e:p.e||'', itens:p.i||p.itens||[], o:p.o||'', b:p.b||'' }; });
     } else if (O.itens && O.itens.length) {
       var by={};
       O.itens.forEach(function(it){
@@ -205,9 +217,10 @@ button,input { font-family:inherit; }
     }
     paradas = brutas.map(function(b,i){
       var end=String(b.e||''); if(end===end.toUpperCase() && /[A-Z]/.test(end)) end=title(end);
-      return { key:'p'+(i+1), n:b.n||(i+1), e:end, obs:b.o||'',
+      var loc2 = b.b ? (b.b + (O.cidade?', '+O.cidade:'')) : loc;
+      return { key:'p'+(i+1), n:b.n||(i+1), e:end, obs:b.o||'', bairro:b.b||O.bairro||'',
         itens:(b.itens||[]).map(function(x){ return {p:String(x.p||''),dt:x.dt||x.data||'',d:x.d||'',o:x.o||''}; }),
-        maps:'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(end+(loc?', '+loc:''))+'&travelmode=driving' };
+        maps:'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(end+(loc2?', '+loc2:''))+'&travelmode=driving' };
     });
     carregar();
     if(!S.log.length) logar('Ordem aberta no aparelho');
@@ -215,6 +228,11 @@ button,input { font-family:inherit; }
     save();
   }
 
+  function liberada(p){
+    if (respondida(p)) return true;
+    var i=indicePendente();
+    return paradas[i] === p;
+  }
   function respondida(p){ var r=S.res[p.key]; return r==='S'||r==='NL'||(r==='N'&&!!S.motivo[p.key]); }
   function indicePendente(){ for(var i=0;i<paradas.length;i++) if(!respondida(paradas[i])) return i; return paradas.length-1; }
   function faltam(){ return paradas.filter(function(p){return !respondida(p);}).length; }
@@ -263,13 +281,20 @@ button,input { font-family:inherit; }
 
     /* mostrando os motivos */
     if (r==='N' && !mot) {
-      h += '<div class="motivos"><h2>Por que não coletou?</h2>'+
-        MOTIVOS.map(function(g){
-          return '<p class="mgrupo">'+g[0]+'</p><div class="mlista">'+
-            g[1].map(function(m){ return '<button type="button" data-act="motivo" data-m="'+esc(m)+'">'+esc(m)+'</button>'; }).join('')+
-          '</div>';
-        }).join('')+
-        '<button type="button" class="volta" data-act="limpar">voltar</button></div>';
+      h += '<div class="motivos"><div class="mtopo"><h2>Motivo</h2>'+
+        '<button type="button" class="btn-volta" data-act="limpar">Voltar</button></div>';
+      if (S.outros) {
+        h += '<div class="outros"><label for="txt-outro">Digite o motivo</label>'+
+          '<input id="txt-outro" type="text" autocomplete="off" maxlength="60" placeholder="ex.: portão trancado">'+
+          '<button type="button" class="btn btn-ok" data-act="outro-ok">Confirmar</button>'+
+          '<button type="button" class="volta" data-act="outro-nao">voltar aos motivos</button></div></div>';
+        $('root').innerHTML=h;
+        var ci=$('txt-outro'); if(ci){ try{ ci.focus(); }catch(e){} }
+        return;
+      }
+      h += '<div class="mlista">'+MOTIVOS.map(function(m){
+        return '<button type="button" data-act="motivo" data-m="'+esc(m)+'">'+esc(m)+'</button>';
+      }).join('')+'</div></div>';
       $('root').innerHTML=h; return;
     }
 
@@ -282,6 +307,9 @@ button,input { font-family:inherit; }
       $('root').innerHTML=h; return;
     }
 
+    h += '<div class="navtopo">'+
+      '<button type="button" class="btn-volta grande" data-act="voltar-foco">← Voltar à lista</button>'+
+      '<button type="button" class="btn-volta grande" data-act="prox">PRÓXIMA →</button></div>';
     h += '<section class="foco">'+
       '<div class="eyebrow">Parada '+p.n+' de '+paradas.length+'</div>'+
       '<h1>'+esc(p.e)+'</h1>';
@@ -310,7 +338,6 @@ button,input { font-family:inherit; }
       }).join('')+'</div>';
     }
 
-    h += '<button type="button" class="volta" data-act="voltar-foco">← Voltar à lista</button>';
     h += '<p class="foot"><button type="button" class="mini" data-act="ver">v'+VERSAO+'</button></p>';
     $('root').innerHTML=h;
   }
@@ -318,10 +345,13 @@ button,input { font-family:inherit; }
   function renderLista(){
     var h = topo() + '<h2 class="sec-h">Todas as paradas</h2><div class="lista">';
     paradas.forEach(function(p,i){
-      var r=S.res[p.key], mot=S.motivo[p.key], ok=respondida(p);
-      h += '<button type="button" id="lin-'+p.key+'" class="lin'+(ok?' feita':'')+'" data-act="abrir" data-i="'+i+'">'+
+      var r=S.res[p.key], mot=S.motivo[p.key], ok=respondida(p), livre=liberada(p);
+      var vez = paradas[indicePendente()];
+      var st = ok ? GLIFO[r]+' '+NOME[r]+(mot?' - '+esc(mot):'')+(S.fotos[p.key]?' 📷':'')
+                  : (livre ? '— pendente' : '🔒 aguarde a parada '+pad(vez.n));
+      h += '<button type="button" id="lin-'+p.key+'" class="lin'+(ok?' feita':'')+(livre?'':' travada')+'" data-act="abrir" data-i="'+i+'">'+
         '<span class="num">'+pad(p.n)+'</span><span><span class="end">'+esc(p.e)+'</span><br>'+
-        '<span class="st">'+(ok?GLIFO[r]+' '+NOME[r]+(mot?' - '+esc(mot):'')+(S.fotos[p.key]?' 📷':''):'— pendente')+'</span></span></button>';
+        '<span class="st">'+st+'</span></span></button>';
     });
     h += '</div>';
     if (!travado() && faltam()===0) h += '<button type="button" class="btn btn-ok" data-act="conferir">FECHAR ORDEM E ENVIAR</button>';
@@ -505,7 +535,9 @@ button,input { font-family:inherit; }
     else proxima();
   }
   function escolherMotivo(m){
+    if (m===OUTROS) { S.outros=true; render(); window.scrollTo(0,0); return; }
     var p=paradas[S.foco];
+    S.outros=false;
     S.motivo[p.key]=m; logar('Parada '+p.n+' · motivo: '+m); save();
     if (m===COM_FOTO) { S.pendenteFoto=true; S.previa=null; render(); window.scrollTo(0,0); }
     else proxima();
@@ -514,7 +546,7 @@ button,input { font-family:inherit; }
     var p=paradas[S.foco];
     if (travado()) return;
     delete S.res[p.key]; delete S.motivo[p.key]; delete S.horas[p.key];
-    S.pendenteFoto=false; S.previa=null;
+    S.pendenteFoto=false; S.previa=null; S.outros=false;
     logar('Parada '+p.n+' · refeita'); save(); render(); window.scrollTo(0,0);
   }
   function enviar(){
@@ -551,7 +583,12 @@ button,input { font-family:inherit; }
     else if (a==='lista'){ S.view='lista'; save(); render(); window.scrollTo(0,0); }
     else if (a==='voltar-foco'){ S.view = S.enviado?'enviado':'lista'; save(); render(); window.scrollTo(0,0); }
     else if (a==='ver-enviado'){ S.view='enviado'; save(); render(); window.scrollTo(0,0); }
-    else if (a==='abrir'){ if(travado()){ toast('Ordem enviada, não dá pra mudar.'); return; } irPara(parseInt(t.getAttribute('data-i'),10)); }
+    else if (a==='abrir'){
+      if(travado()){ toast('Ordem enviada, não dá pra mudar.'); return; }
+      var ix=parseInt(t.getAttribute('data-i'),10), alvo=paradas[ix];
+      if(!liberada(alvo)){ toast('Responda a parada '+pad(paradas[indicePendente()].n)+' primeiro.'); return; }
+      irPara(ix);
+    }
     else if (a==='conferir'){ S.view='conferir'; save(); render(); window.scrollTo(0,0); }
     else if (a==='enviar') enviar();
     else if (a==='reenviar') mandarTexto();
@@ -559,6 +596,12 @@ button,input { font-family:inherit; }
     else if (a==='arquivo') baixarArquivo();
     else if (a==='ir-aviso'){ var k=S.aviso&&S.aviso.key; S.aviso=null;
       var idx=paradas.map(function(x){return x.key;}).indexOf(k); save(); irPara(idx<0?S.foco:idx); }
+    else if (a==='outro-ok'){
+      var v=($('txt-outro')&&$('txt-outro').value||'').trim();
+      if(!v){ toast('Escreva o motivo.'); return; }
+      S.outros=false; escolherMotivo(v);
+    }
+    else if (a==='outro-nao'){ S.outros=false; render(); window.scrollTo(0,0); }
     else if (a==='ver'){ toqueVersao(); }
     else if (a==='foto'){ $('cam').click(); }
     else if (a==='foto-ok'){ S.pendenteFoto=false; S.previa=null; save(); proxima(); }
