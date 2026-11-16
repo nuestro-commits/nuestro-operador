@@ -41,6 +41,7 @@ button,input { font-family:inherit; }
 .frota { font-size:13px; color:var(--muted); }
 .cnt { font-family:var(--font-display); font-size:15px; color:var(--muted); white-space:nowrap; text-align:right; }
 .cnt strong { font-size:26px; color:var(--ink); display:block; line-height:1; font-variant-numeric:tabular-nums; }
+.pos { font-family:var(--font-display); font-size:26px; font-weight:700; white-space:nowrap; }
 .bar { height:7px; background:var(--line); border-radius:4px; overflow:hidden; }
 .bar i { display:block; height:100%; width:0; background:var(--accent); }
 @media (prefers-reduced-motion:no-preference) { .bar i { transition:width .3s ease; } }
@@ -135,7 +136,7 @@ button,input { font-family:inherit; }
 <script>
 (function () {
   'use strict';
-  var VERSAO = '0.4.2';
+  var VERSAO = '0.4.3';
 
   var MOTIVOS = ['Grande Quantidade','Dentro do Imóvel','Carro Obstruindo','Endereço não Encontrado',
     'Morador de rua no local','Tronco de Árvore','Areia, Terra, Pedra','Blocos de Concreto',
@@ -168,7 +169,11 @@ button,input { font-family:inherit; }
   }
   function carregar(){ try{ var r=localStorage.getItem(KEY); if(!r) return;
       var o=JSON.parse(r); Object.keys(S).forEach(function(k){ if(o[k]!=null) S[k]=o[k]; });
-      if(!S.log) S.log=[]; S.view = S.enviado ? 'enviado' : 'lista'; S.aviso=null;
+      if(!S.log) S.log=[];
+      /* se o Android matou a página enquanto ele estava no Maps, volta para o cartão */
+      if (S.enviado) S.view='enviado';
+      else if (S.view!=='foco') S.view='lista';
+      S.aviso=null;
     }catch(e){} }
   function logar(m){ S.log.push({t:new Date().toISOString(),m:m}); }
 
@@ -195,7 +200,7 @@ button,input { font-family:inherit; }
     });
     carregar();
     if(!S.log.length) logar('Ordem aberta no aparelho');
-    S.foco = Math.max(0, indicePendente());
+    if (S.view!=='foco' || !paradas[S.foco]) S.foco = Math.max(0, indicePendente());
     save();
   }
 
@@ -214,14 +219,18 @@ button,input { font-family:inherit; }
       '<p class="foot">versão '+VERSAO+'</p></div>';
   }
 
-  function topo(){
+  function topo(pos){
     var feitas=paradas.length-faltam();
+    var dir = pos
+      ? '<div class="pos">'+pos+' de '+paradas.length+'</div>'
+      : '<div class="cnt"><strong>'+feitas+'</strong>de '+paradas.length+'</div>';
+    var barra = pos ? ''
+      : '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+paradas.length+'" aria-valuenow="'+feitas+'">'+
+        '<i style="width:'+(paradas.length?feitas/paradas.length*100:0)+'%"></i></div>';
     return '<header class="top"><div class="top-row"><div>'+
       '<div class="ordem">'+esc(O.ordem||'—')+'</div>'+
       '<div class="frota">'+[O.frota?'Frota '+esc(O.frota):'',esc(O.bairro||'')].filter(Boolean).join(' · ')+'</div></div>'+
-      '<div class="cnt"><strong>'+feitas+'</strong>de '+paradas.length+'</div></div>'+
-      '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+paradas.length+'" aria-valuenow="'+feitas+'">'+
-      '<i style="width:'+(paradas.length?feitas/paradas.length*100:0)+'%"></i></div></header>';
+      dir+'</div>'+barra+'</header>';
   }
 
   function render(){
@@ -236,7 +245,7 @@ button,input { font-family:inherit; }
     var r = S.res[p.key], mot = S.motivo[p.key];
     var h = '';
     if (isWebView()) h += '<div class="wv"><b>▲ Abra no Chrome.</b> No navegador do WhatsApp o que você marcar pode sumir.</div>';
-    h += topo();
+    h += topo(p.n);
 
     if (S.aviso) {
       h += '<div class="aviso"><b>▲ Parada '+S.aviso.n+' sem resposta</b>'+
@@ -273,7 +282,6 @@ button,input { font-family:inherit; }
       } else { S.fora=null; }
     }
     h += '<section class="foco">'+
-      '<div class="eyebrow">Coleta '+p.n+' de '+paradas.length+'</div>'+
       '<h1>'+esc(p.e)+'</h1>';
     if (p.itens.length) {
       h += '<div class="pedidos">'+p.itens.map(function(i){
@@ -459,7 +467,7 @@ button,input { font-family:inherit; }
   document.addEventListener('click', function(ev){
     var t=ev.target.closest?ev.target.closest('[data-act]'):null; if(!t) return;
     var a=t.getAttribute('data-act');
-    if (a==='maps'){ var p=paradas[S.foco]; S.saiuPara=p.key; S.saiuEm=new Date().toISOString();
+    if (a==='maps'){ var p=paradas[S.foco]; S.saiuPara=p.key; S.saiuEm=new Date().toISOString(); S.view='foco';
       logar('Abriu o mapa da coleta '+p.n); save(); return; }     /* deixa o link abrir */
     ev.preventDefault();
     if (a==='res') marcar(t.getAttribute('data-r'));
