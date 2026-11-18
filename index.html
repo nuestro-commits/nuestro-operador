@@ -136,7 +136,7 @@ button,input { font-family:inherit; }
 <script>
 (function () {
   'use strict';
-  var VERSAO = '0.4.3';
+  var VERSAO = '0.4.4';
 
   var MOTIVOS = ['Grande Quantidade','Dentro do Imóvel','Carro Obstruindo','Endereço não Encontrado',
     'Morador de rua no local','Tronco de Árvore','Areia, Terra, Pedra','Blocos de Concreto',
@@ -359,6 +359,8 @@ button,input { font-family:inherit; }
     L.push('Fechada em '+dataBR(S.enviado||new Date().toISOString()));
     paradas.forEach(function(p){
       var r=S.res[p.key], mot=S.motivo[p.key], t=pad(p.n)+' ';
+      var prots=p.itens.map(function(i){ return i.p; }).filter(Boolean).join(' ');
+      t += (prots ? prots+' · ' : '');
       if (r==='S') t+='Coletado';
       else if (r==='NL') t+='Coletado (nada no local)';
       else if (r==='N') t+='Não Coletado - '+(mot||'');
